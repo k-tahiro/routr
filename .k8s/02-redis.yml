@@ -22,6 +22,9 @@ metadata:
 spec:
   strategy:
     type: Recreate
+  selector:
+    matchLabels:
+      app: routr
   template:
     metadata:
       labels:
