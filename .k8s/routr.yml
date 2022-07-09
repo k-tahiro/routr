@@ -5,7 +5,7 @@ metadata:
   labels:
     app: routr
 spec:
-  type: LoadBalancer
+  type: NodePort
   # "Local" preserves the client source IP and avoids a second hop for
   # LoadBalancer and NodePort
   externalTrafficPolicy: Local
