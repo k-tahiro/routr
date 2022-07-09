@@ -34,6 +34,8 @@ spec:
         app: routr
         tier: sip
     spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64
       containers:
       - name: routr
         image: fonoster/routr:1.0.0-edge-20200607
