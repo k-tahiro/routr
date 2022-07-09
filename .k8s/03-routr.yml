@@ -33,6 +33,25 @@ spec:
     app: routr
     tier: sip
 ---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: routr-admin
+  namespace: voip
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: routr-admin.tahiro.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: routr-https
+            port:
+              name: https
+        path: /
+        pathType: ImplementationSpecific
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
