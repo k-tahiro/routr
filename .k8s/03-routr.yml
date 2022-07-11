@@ -78,9 +78,9 @@ spec:
       - name: routr
         image: fonoster/routr:latest
         env:
-        - name: ROUTR_DS_PROVIDER
+        - name: DATA_SOURCE_PROVIDER
           value: redis_data_provider
-        - name: ROUTR_DS_PARAMETERS
+        - name: DATA_SOURCE_PARAMETERS
           value: host=redis-routr,port=6379
         ports:
         - containerPort: 5060
