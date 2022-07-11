@@ -17,6 +17,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis-routr
+  namespace: voip
   labels:
     app: routr
 spec:
