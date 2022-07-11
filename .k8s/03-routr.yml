@@ -20,14 +20,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: routr-https
+  name: routr-http
   namespace: voip
   labels:
     app: routr
 spec:
   type: ClusterIP
   ports:
-  - name: https
+  - name: http
     port: 4567
   selector:
     app: routr
@@ -46,9 +46,9 @@ spec:
       paths:
       - backend:
           service:
-            name: routr-https
+            name: routr-http
             port:
-              name: https
+              name: http
         path: /
         pathType: ImplementationSpecific
 ---
@@ -86,7 +86,7 @@ spec:
         - containerPort: 5060
           name: sip
         - containerPort: 4567
-          name: https
+          name: http
         volumeMounts:
         - name: log4j2
           mountPath: /opt/routr/config/log4j2.yml
