@@ -82,6 +82,8 @@ spec:
           value: redis_data_provider
         - name: DATA_SOURCE_PARAMETERS
           value: host=redis-routr,port=6379
+        - name: REST_SERVICE_UNSECURED
+          value: 'true'
         ports:
         - containerPort: 5060
           name: sip
