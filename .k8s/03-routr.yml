@@ -20,7 +20,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: routr-http
+  name: routr-rest
   namespace: voip
   labels:
     app: routr
@@ -36,17 +36,17 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: routr-admin
+  name: routr-rest
   namespace: voip
 spec:
   ingressClassName: traefik
   rules:
-  - host: routr-admin.tahiro.org
+  - host: routr-rest.tahiro.org
     http:
       paths:
       - backend:
           service:
-            name: routr-http
+            name: routr-rest
             port:
               name: http
         path: /
