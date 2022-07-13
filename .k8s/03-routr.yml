@@ -1,4 +1,38 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: routr
+  namespace: voip
+data:
+  log4j2.yml: |-
+    Configuration:
+      Appenders:
+        Console:
+          PatternLayout:
+            pattern: '[%-5level] %msg%n'
+          name: Console
+          target: SYSTEM_OUT
+        # Do not remove this appender as is needed by the /system/logs endpoint
+        # If you want to save the logs elsewhere just add another appender.
+        RollingFile:
+          - name: LogToRollingFile
+            fileName: "${sys:ROUTR_DATA}/logs/routr.log"
+            filePattern: "${sys:ROUTR_DATA}/logs/$${date:yyyy-MM}/routr-%d{MM-dd-yyyy}-%i.log.gz"
+            PatternLayout:
+              pattern: "[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+            Policies:
+              SizeBasedTriggeringPolicy:
+                size: 10MB
+            DefaultRollOverStrategy:
+              max: 10
+      Loggers:
+        Root:
+          level: debug
+          AppenderRef:
+          - ref: Console
+          - ref: LogToRollingFile
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: routr-sip
@@ -90,10 +124,9 @@ spec:
         - containerPort: 4567
           name: http
         volumeMounts:
-        - name: log4j2
-          mountPath: /opt/routr/config/log4j2.yml
-          subPath: log4j2.yml
+        - name: routr-config
+          mountPath: /opt/routr/config
       volumes:
-      - name: log4j2
+      - name: routr-config
         configMap:
-          name: log4j2
+          name: routr
