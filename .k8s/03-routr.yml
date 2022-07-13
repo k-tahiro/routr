@@ -125,7 +125,8 @@ spec:
           name: http
         volumeMounts:
         - name: routr-config
-          mountPath: /opt/routr/config
+          mountPath: /opt/routr/config/log4j2.yml
+          subPath: log4j2.yml
       volumes:
       - name: routr-config
         configMap:
