@@ -116,6 +116,8 @@ spec:
           value: redis_data_provider
         - name: DATA_SOURCE_PARAMETERS
           value: host=redis-routr,port=6379
+        - name: REGISTRAR_INTF
+          value: Internal
         - name: REST_SERVICE_UNSECURED
           value: 'true'
         ports:
