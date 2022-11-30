@@ -8,7 +8,7 @@ google_analytics: ['UA-71722942-3', 'routr.io']
 # Repository
 repo_name: fonoster/routr
 repo_url: https://github.com/fonoster/routr
-edit_uri: /fonoster/routr/edit/master/docs/
+edit_uri: /fonoster/routr/edit/main/docs/
 
 nav:
   - Introduction:
@@ -94,7 +94,7 @@ nav:
     - Benchmarking: guides/benchmarking.md
 
 # Copyright
-copyright: 'Copyright &copy; 2021 Fonoster Inc'
+copyright: 'Copyright &copy; 2022 Fonoster Inc'
 theme:
   name: material
   custom_dir: docs/theme

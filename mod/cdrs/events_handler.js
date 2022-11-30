@@ -4,15 +4,13 @@
  * @author Pedro Sanders
  * @since v1
  */
+const config = require('@routr/core/config_util')()
 const postal = require('postal')
-const CDRSender = Java.type('io.routr.core.CDRSender')
-const LogManager = Java.type('org.apache.logging.log4j.LogManager')
-const LOG = LogManager.getLogger(Java.type('io.routr.core.Launcher'))
+const KafkaSender = require('./kafka_cdrs_sender')
+const { sendCallRecordToFluent } = require('./fluent_cdrs_sender')
 
 class EventsHandler {
   constructor () {
-    LOG.debug('Starting CDRS EventsManager')
-
     postal.subscribe({
       channel: 'cdrs',
       topic: 'cdr.started',
@@ -25,11 +23,20 @@ class EventsHandler {
       callback: data => this.processEvent(data.cdr)
     })
 
-    this.sender = new CDRSender()
+    if (config.spec.ex_kafka?.enabled) {
+      this.kafkaSender = new KafkaSender()
+    }
   }
 
   processEvent (cdr) {
-    this.sender.sendCallRecord(JSON.stringify(cdr))
+    if (config.spec.ex_kafka?.enabled) {
+      this.kafkaSender.sendCallRecord(JSON.stringify(cdr))
+    }
+
+    // We only need to send full CDRs to Fluentd
+    if (cdr.endTime) {
+      sendCallRecordToFluent(cdr)
+    }
   }
 }
 

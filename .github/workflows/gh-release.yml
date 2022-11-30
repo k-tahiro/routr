@@ -47,7 +47,10 @@ jobs:
       - name: Create dist files
         env:
           ROUTR_VERSION: ${{ steps.get_version.outputs.ROUTR_VERSION }}
-        run: ./distro.sh
+        run: |
+          npm run distro:linux
+          npm run distro:darwin
+          npm run distro:windows
       #- name: Compliance tests
       #  env:
       #    ROUTR_VERSION: ${{ steps.get_version.outputs.ROUTR_VERSION }}
@@ -55,7 +58,7 @@ jobs:
       - name: Publish draft release
         uses: ncipollo/release-action@v1
         with:
-          name: Routr 1.0.x (Draft)
+          name: Routr 1.x.x (Draft)
           artifacts: "routr-1.*"
           bodyFile: "RELEASE.md"
           draft: true

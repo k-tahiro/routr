@@ -4,6 +4,7 @@
  * @author Pedro Sanders
  * @since v1
  */
+const { isMethod } = require('../core/processor/processor_utils')
 const config = require('@routr/core/config_util')()
 const postal = require('postal')
 const getTerminationCause = require('@routr/cdrs/termination_cause')
@@ -15,12 +16,12 @@ const LogManager = Java.type('org.apache.logging.log4j.LogManager')
 const CallIdHeader = Java.type('javax.sip.header.CallIdHeader')
 const FromHeader = Java.type('javax.sip.header.FromHeader')
 const ToHeader = Java.type('javax.sip.header.ToHeader')
+const Request = Java.type('javax.sip.message.Request')
 const LOG = LogManager.getLogger(Java.type('io.routr.core.Launcher'))
 const System = Java.type('java.lang.System')
 
 class CDRSManager {
   constructor () {
-    LOG.info('Starting CDRS Manager')
     postal.subscribe({
       channel: 'processor',
       topic: 'call.started',
@@ -30,16 +31,19 @@ class CDRSManager {
     postal.subscribe({
       channel: 'processor',
       topic: 'call.end',
-      callback: data => this.processCallEndEvent(data.request)
+      callback: data => this.processCallEndEvent(data.request, data.response)
     })
 
     postal.subscribe({
       channel: 'processor',
-      topic: 'transaction.terminated',
-      callback: data => this.processCallEndEvent(data)
+      topic: 'transaction.cancel',
+      callback: data => {
+        this.processCallEndEvent(data.transaction.getRequest())
+      }
     })
 
     this.store = new Map()
+
     new EventsHandler()
     if (config.spec.ex_rtpEngine.enabled) {
       this.rtpeConnector = new RTPEngineConnector(config.spec.ex_rtpEngine)
@@ -47,7 +51,16 @@ class CDRSManager {
   }
 
   processCallStartEvent (request) {
-    LOG.debug('Processing call.started event')
+    const callId = request.getHeader(CallIdHeader.NAME).getCallId()
+    const startCdr = this.store.get(callId)
+
+    if (startCdr) {
+      // Avoid duplicating cdr
+      return
+    }
+
+    LOG.debug(`cdrs.manager processing call.started event [callId = ${callId}]`)
+
     const fromAddress = request
       .getHeader(FromHeader.NAME)
       .getAddress()
@@ -61,8 +74,8 @@ class CDRSManager {
 
     const cdr = {
       callId: request.getHeader(CallIdHeader.NAME).getCallId(),
-      from: `${fromAddress.getUser()}@${fromAddress.getHost()}`,
-      to: `${toAddress.getUser()}@${toAddress.getHost()}`,
+      from: `sip:${fromAddress.getUser()}@${fromAddress.getHost()}`,
+      to: `sip:${toAddress.getUser()}@${toAddress.getHost()}`,
       startTime: new Date(),
       gatewayRef: request.getHeader('X-Gateway-Ref')?.value || '',
       gatewayHost: request.getRequestURI().getHost(),
@@ -70,6 +83,11 @@ class CDRSManager {
       codec,
       extraHeaders: getExtraHeaders(request)
     }
+
+    if (request.getHeader('X-Access-Key-Id')?.value) {
+      cdr.accessKeyId = request.getHeader('X-Access-Key-Id')?.value
+    }
+
     this.store.set(cdr.callId, cdr)
 
     postal.publish({
@@ -81,37 +99,37 @@ class CDRSManager {
     })
   }
 
-  validateSSN (ssn) {
-    return ssn && ssn.length === 9 && !isNaN(ssn)
-  }
-
   // TODO: Get qos or not available (hard) need instance to RTPEngine
-  async processCallEndEvent (request) {
-    LOG.debug('Processing call.end event')
+  async processCallEndEvent (request, response) {
     const callId = request.getHeader(CallIdHeader.NAME).getCallId()
+    LOG.debug(`cdrs.manager processing call.end event [callId = ${callId}]`)
 
-    // If the request method is not BYE, then we should mark this as unknown
-    const terminationCode =
-      request.getHeader('X-Asterisk-HangupCauseCode')?.value || -1
+    let terminationCode = -1
+
+    if (response) {
+      // Mapping response SIP reject to ISDN reject
+      terminationCode =
+        response.getStatusCode() === 603 ? 21 : response.getStatusCode()
+    } else if (isMethod(request, [Request.CANCEL])) {
+      terminationCode = 16
+    } else if (request.getHeader('X-Asterisk-HangupCauseCode')?.value) {
+      terminationCode = request.getHeader('X-Asterisk-HangupCauseCode')?.value
+    } else if (isMethod(request, [Request.BYE])) {
+      // Keep it in this order
+      terminationCode = 16
+    }
+
     const startCdr = this.store.get(callId)
     const qos = (await this.rtpeConnector?.getQoS(callId)) || {}
 
     if (startCdr) {
       const cdr = {
-        callId: startCdr.callId,
-        from: startCdr.from,
-        to: startCdr.to,
-        startTime: startCdr.startTime,
+        ...startCdr,
         endTime: new Date(),
         duration: (new Date() - startCdr.startTime) / 1000,
-        gatewayRef: startCdr.gatewayRef,
-        gatewayHost: startCdr.gatewayHost,
-        routrInstance: startCdr.routrInstance,
         terminationCause: getTerminationCause(terminationCode),
         terminationCode: terminationCode,
-        codec: startCdr.codec,
-        qos,
-        extraHeaders: startCdr.extraHeaders
+        qos
       }
 
       this.store.delete(callId)
@@ -123,7 +141,9 @@ class CDRSManager {
           cdr
         }
       })
+      return
     }
+    LOG.debug('cdrs.manager no startCdr found; ignoring call.end event')
   }
 }
 

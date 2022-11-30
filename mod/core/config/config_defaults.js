@@ -1,3 +1,7 @@
+/**
+ * @author Pedro Sanders
+ * @since v1
+ */
 const InetAddress = Java.type('java.net.InetAddress')
 const version = 'v1.0'
 const apiVersion = 'v1beta1'
@@ -57,6 +61,10 @@ module.exports = upSince => {
           }
         }
       },
+      ex_kafka: {
+        saslMechanism: 'PLAIN',
+        securityProtocol: 'SASL_SSL'
+      },
       registrarIntf: 'External',
       restService: {
         keyStore: 'etc/certs/api-cert.jks',
@@ -83,8 +91,8 @@ module.exports = upSince => {
         keyStorePassword: 'changeit',
         keyStoreType: 'jks',
         client: {
-          authType: 'DisabledAll',
-          protocols: ['SSLv3', 'TLSv1.2', 'TLSv1.1', 'TLSv1']
+          authType: 'Want',
+          protocols: ['TLSv1.2']
         }
       },
       accessControlList: {

@@ -17,6 +17,8 @@ const FromHeader = Java.type('javax.sip.header.FromHeader')
 const Request = Java.type('javax.sip.message.Request')
 const LocatorUtils = require('@routr/location/utils')
 const postal = require('postal')
+const SipFactory = Java.type('javax.sip.SipFactory')
+const headerFactory = SipFactory.getInstance().createHeaderFactory()
 
 const {
   getEdgeAddr,
@@ -30,7 +32,6 @@ const {
   configureRecordRoute,
   configureIdentity,
   configureXHeaders,
-  configureCSeq,
   isInDialog,
   getTargetTransport
 } = require('@routr/core/processor/request_utils')
@@ -52,8 +53,9 @@ class RequestHandler {
   constructor (sipProvider, contextStorage) {
     this.sipProvider = sipProvider
     this.contextStorage = contextStorage
-    if (config.spec.ex_rtpEngine.enabled)
+    if (config.spec.ex_rtpEngine.enabled) {
       this.rtpeConnector = new RTPEngineConnector(config.spec.ex_rtpEngine)
+    }
 
     postal.subscribe({
       channel: 'locator',
@@ -210,6 +212,15 @@ class RequestHandler {
         targetTransport
       )
 
+      // If route has accessKeyId, then add as an extra header
+      if (route?.accessKeyId) {
+        const accessKeyId = headerFactory.createHeader(
+          'X-Access-Key-Id',
+          route?.accessKeyId
+        )
+        requestOut.setHeader(accessKeyId)
+      }
+
       if (!isInDialog(request)) {
         requestOut = configureRequestURI(requestOut, routeInfo, route)
         requestOut = configurePrivacy(requestOut, routeInfo)
@@ -222,14 +233,6 @@ class RequestHandler {
         )
       } else if (route) {
         requestOut = configureRequestURI(requestOut, null, route)
-      }
-
-      if (
-        routeInfo &&
-        routeInfo.getRoutingType() === RoutingType.DOMAIN_EGRESS_ROUTING
-      ) {
-        // XXX: Please document this situation :(
-        requestOut = configureCSeq(requestOut)
       }
 
       let bridgingNote
